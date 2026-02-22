@@ -1,4 +1,8 @@
+using Api.Models;
+
 var builder = WebApplication.CreateBuilder(args);
+
+var tasks = new List<TaskItem>();
 
 builder.Services.AddCors(options =>
 {
@@ -52,6 +56,41 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.MapGet("/api/tasks", () => tasks);
+
+app.MapPost("/api/tasks", (CreateTaskRequest req) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Title))
+        return Results.BadRequest("Title is required.");
+
+    var task = new TaskItem(Guid.NewGuid(), req.Title.Trim(), false);
+    tasks.Add(task);
+    return Results.Created($"/api/tasks/{task.Id}", task);
+});
+
+app.MapPut("/api/tasks/{id:guid}", (Guid id, UpdateTaskRequest req) =>
+{
+    var idx = tasks.FindIndex(t => t.Id == id);
+    if (idx == -1) return Results.NotFound();
+
+    if (string.IsNullOrWhiteSpace(req.Title))
+        return Results.BadRequest("Title is required.");
+
+    var updated = new TaskItem(id, req.Title.Trim(), req.IsDone);
+    tasks[idx] = updated;
+    return Results.Ok(updated);
+});
+
+app.MapDelete("/api/tasks/{id:guid}", (Guid id) =>
+{
+    var idx = tasks.FindIndex(t => t.Id == id);
+    if (idx == -1) return Results.NotFound();
+
+    tasks.RemoveAt(idx);
+    return Results.NoContent();
+});
+
 
 app.Run();
 

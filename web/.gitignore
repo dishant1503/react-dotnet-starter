@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# .NET
+bin/
+obj/
+
+# Node
+node_modules/
+dist/
+
+# Mac
+.DS_Store
+
+# VS Code
+.vscode/
+

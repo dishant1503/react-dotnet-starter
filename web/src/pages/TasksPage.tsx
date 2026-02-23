@@ -60,6 +60,20 @@ export function TasksPage() {
     }
   };
 
+  const updateTaskTitle = async (task: TaskItem, newTitle: string) => {
+    if (!newTitle) return;
+    setError("");
+    try {
+      await tasksApi.update(task.id, {
+        title: newTitle,
+        isDone: task.isDone,
+      });
+      await load();
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
+    }
+  };
+
   return (
     <div style={{ maxWidth: 700, margin: "40px auto", padding: 16 }}>
       <h1>Task Manager</h1>
@@ -68,7 +82,12 @@ export function TasksPage() {
 
       {error && <div style={{ marginTop: 12, color: "crimson" }}>{error}</div>}
 
-      <TaskList tasks={tasks} onToggle={toggleDone} onDelete={deleteTask} />
+      <TaskList
+        tasks={tasks}
+        onToggle={toggleDone}
+        onDelete={deleteTask}
+        onUpdate={updateTaskTitle}
+      />
     </div>
   );
 }

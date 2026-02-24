@@ -1,8 +1,12 @@
 using Api.Models;
+using Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var tasks = new List<TaskItem>();
+var cs = builder.Configuration.GetConnectionString("Default");
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseMySql(cs, ServerVersion.AutoDetect(cs)));
 
 builder.Services.AddCors(options =>
 {
@@ -43,54 +47,108 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
-app.MapGet("/weatherforecast", () =>
+// app.MapGet("/weatherforecast", () =>
+// {
+//     var forecast =  Enumerable.Range(1, 5).Select(index =>
+//         new WeatherForecast
+//         (
+//             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+//             Random.Shared.Next(-20, 55),
+//             summaries[Random.Shared.Next(summaries.Length)]
+//         ))
+//         .ToArray();
+//     return forecast;
+// })
+// .WithName("GetWeatherForecast");
+
+// app.MapGet("/api/tasks", () => tasks);
+
+// app.MapPost("/api/tasks", (CreateTaskRequest req) =>
+// {
+//     if (string.IsNullOrWhiteSpace(req.Title))
+//         return Results.BadRequest("Title is required.");
+
+//     var task = new TaskItem(Guid.NewGuid(), req.Title.Trim(), false);
+//     tasks.Add(task);
+//     return Results.Created($"/api/tasks/{task.Id}", task);
+// });
+
+// app.MapPut("/api/tasks/{id:guid}", (Guid id, UpdateTaskRequest req) =>
+// {
+//     var idx = tasks.FindIndex(t => t.Id == id);
+//     if (idx == -1) return Results.NotFound();
+
+//     if (string.IsNullOrWhiteSpace(req.Title))
+//         return Results.BadRequest("Title is required.");
+
+//     var updated = new TaskItem(id, req.Title.Trim(), req.IsDone);
+//     tasks[idx] = updated;
+//     return Results.Ok(updated);
+// });
+
+// app.MapDelete("/api/tasks/{id:guid}", (Guid id) =>
+// {
+//     var idx = tasks.FindIndex(t => t.Id == id);
+//     if (idx == -1) return Results.NotFound();
+
+//     tasks.RemoveAt(idx);
+//     return Results.NoContent();
+// });
+
+app.MapGet("/api/tasks", async (AppDbContext db) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var entities = await db.Tasks
+        .OrderByDescending(t => t.Id)
+        .ToListAsync();
 
-app.MapGet("/api/tasks", () => tasks);
+    return entities.Select(t => new TaskItem(t.Id, t.Title, t.IsDone));
+});
 
-app.MapPost("/api/tasks", (CreateTaskRequest req) =>
+app.MapPost("/api/tasks", async (CreateTaskRequest req, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(req.Title))
         return Results.BadRequest("Title is required.");
 
-    var task = new TaskItem(Guid.NewGuid(), req.Title.Trim(), false);
-    tasks.Add(task);
-    return Results.Created($"/api/tasks/{task.Id}", task);
+    var entity = new TaskEntity
+    {
+        Id = Guid.NewGuid(),
+        Title = req.Title.Trim(),
+        IsDone = false
+    };
+
+    db.Tasks.Add(entity);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/api/tasks/{entity.Id}",
+        new TaskItem(entity.Id, entity.Title, entity.IsDone));
 });
 
-app.MapPut("/api/tasks/{id:guid}", (Guid id, UpdateTaskRequest req) =>
+app.MapPut("/api/tasks/{id:guid}", async (Guid id, UpdateTaskRequest req, AppDbContext db) =>
 {
-    var idx = tasks.FindIndex(t => t.Id == id);
-    if (idx == -1) return Results.NotFound();
+    var entity = await db.Tasks.FindAsync(id);
+    if (entity is null) return Results.NotFound();
 
     if (string.IsNullOrWhiteSpace(req.Title))
         return Results.BadRequest("Title is required.");
 
-    var updated = new TaskItem(id, req.Title.Trim(), req.IsDone);
-    tasks[idx] = updated;
-    return Results.Ok(updated);
+    entity.Title = req.Title.Trim();
+    entity.IsDone = req.IsDone;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new TaskItem(entity.Id, entity.Title, entity.IsDone));
 });
 
-app.MapDelete("/api/tasks/{id:guid}", (Guid id) =>
+app.MapDelete("/api/tasks/{id:guid}", async (Guid id, AppDbContext db) =>
 {
-    var idx = tasks.FindIndex(t => t.Id == id);
-    if (idx == -1) return Results.NotFound();
+    var entity = await db.Tasks.FindAsync(id);
+    if (entity is null) return Results.NotFound();
 
-    tasks.RemoveAt(idx);
+    db.Tasks.Remove(entity);
+    await db.SaveChangesAsync();
+
     return Results.NoContent();
 });
-
 
 app.Run();
 

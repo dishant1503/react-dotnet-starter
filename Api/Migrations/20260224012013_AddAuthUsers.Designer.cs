@@ -4,6 +4,7 @@ using Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260224012013_AddAuthUsers")]
+    partial class AddAuthUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,32 +24,6 @@ namespace Api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
-
-            modelBuilder.Entity("Api.Models.PasswordResetTokenEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<byte[]>("TokenHash")
-                        .IsRequired()
-                        .HasColumnType("longblob");
-
-                    b.Property<DateTime?>("UsedAtUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "ExpiresAtUtc");
-
-                    b.ToTable("PasswordResetTokens");
-                });
 
             modelBuilder.Entity("Api.Models.TaskEntity", b =>
                 {
@@ -97,17 +74,6 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Api.Models.PasswordResetTokenEntity", b =>
-                {
-                    b.HasOne("Api.Models.UserEntity", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Models.TaskEntity", b =>
